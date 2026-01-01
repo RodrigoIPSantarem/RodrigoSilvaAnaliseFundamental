@@ -76,11 +76,11 @@ public abstract class Acao {
 
     // ========== TEMPLATE METHOD: KILL SWITCHES UNIVERSAL ==========
     /**
-     * MÉTODO FINAL: Não pode ser sobrescrito pelas subclasses.
+     * CORREÇÃO FEITA AQUI: Removi 'final' para permitir override no AcaoBanco.
      * Implementa TODOS os kill switches do protocolo v3.1.
      * Se falhar em QUALQUER um → REJEITAR IMEDIATAMENTE.
      */
-    public final List<String> verificarKillSwitchesUniversais() {
+    public List<String> verificarKillSwitchesUniversais() {
         List<String> violacoes = new ArrayList<>();
         DadosFinanceiros df = this.mDadosFinanceiros;
 
@@ -125,9 +125,7 @@ public abstract class Acao {
 
         // === KILL SWITCH 5: FCO NEGATIVO ===
         // "Fluxo Caixa Operacional negativo 2+ anos"
-        // EXCEÇÃO: Bancos/Financeiras têm FCO com interpretação diferente
-        // (transações bancárias distorcem esta métrica)
-        if (this.mSetor != Setor.FINANCEIRO && df.temFCONegativo2Anos()) {
+        if (df.temFCONegativo2Anos()) {
             violacoes.add("KILL SWITCH 5: Fluxo de Caixa Operacional negativo 2+ anos");
         }
 

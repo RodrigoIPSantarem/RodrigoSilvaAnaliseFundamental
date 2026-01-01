@@ -6,7 +6,7 @@ import java.util.*;
 
 /**
  * Programa principal que demonstra TODO o sistema funcionando.
- * VERSÃO CORRIGIDA: Usa 'gerarRelatorioCompleto' conforme definido no Portefolio.
+ * VERSÃO FINAL: Lista de ações limpa e menu protegido contra erros.
  */
 public class Principal {
 
@@ -21,15 +21,16 @@ public class Principal {
         double taxaTesouro = ClienteApi.obterTaxaTesouro();
         System.out.printf("💰 Taxa Livre de Risco (US 10Y): %.2f%%\n\n", taxaTesouro * 100);
 
-        // 2. Criar portefólio (Usando o construtor completo que tens no Portefolio.java)
+        // 2. Criar portefólio
         Portefolio portefolio = new Portefolio("Rodrigo Silva", taxaTesouro, 100000.0);
 
-        // 3. Analisar TODAS as ações
+        // 3. Analisar TODAS as ações reais
         System.out.println("🔍 ANALISANDO TODAS AS AÇÕES DISPONÍVEIS...\n");
 
+        // LISTA LIMPA: Apenas empresas reais para análise séria
         String[] todasAcoes = {
-                "AAPL", "MSFT", "JPM", "KO", "NEE",
-                "TSLA", "DIL", "DEBT", "LOSS", "FALL"
+                "AAPL", "MSFT", "JPM", "KO", "NEE",  // Clássicas
+                "TSLA", "NVG.LS", "NVO", "GOOGL"     // Outras interessantes
         };
 
         for (String ticker : todasAcoes) {
@@ -38,18 +39,20 @@ public class Principal {
 
             try {
                 Map<String, Object> dados = ClienteApi.obterDadosAcao(ticker);
-                // Verificar se a ação foi encontrada
 
-                if (dados.containsKey("naoEncontrada") && (Boolean) dados.get("naoEncontrada")) {
-
-                    System.out.println("   ⚠️  Ação não encontrada na API - IGNORADA");
-
-                    continue;  // Não adicionar ao portefólio
-
+                // Se a API falhar ou a ação não existir, ignoramos silenciosamente aqui
+                if (dados.containsKey("erro") || dados.isEmpty()) {
+                    System.out.println("   ⚠️  Ação não encontrada ou erro na API - IGNORADA");
+                    continue;
                 }
+
+                // Criar ação via Factory Pattern
                 Acao acao = FabricaAcoes.criarAcao(dados);
+
+                // Adicionar ao portefólio
                 portefolio.adicionarAcao(acao);
 
+                // Análise rápida na consola
                 List<String> kills = acao.verificarKillSwitchesUniversais();
                 if (!kills.isEmpty()) {
                     System.out.println("   Status: ❌ REJEITADA");
@@ -65,7 +68,7 @@ public class Principal {
                 }
 
             } catch (Exception e) {
-                System.out.println("   Erro: " + e.getMessage());
+                System.out.println("   Erro não tratado: " + e.getMessage());
             }
         }
 
@@ -73,7 +76,7 @@ public class Principal {
         System.out.println("✅ ANÁLISE CONCLUÍDA!");
         System.out.println("=".repeat(80));
 
-        // CORREÇÃO AQUI: Mudado de 'gerarRelatorio' para 'gerarRelatorioCompleto'
+        // 4. Gerar relatório completo
         System.out.println("\n" + portefolio.gerarRelatorioCompleto());
 
         // 5. Menu interativo
@@ -96,8 +99,9 @@ public class Principal {
             System.out.print("\nEscolha uma opção: ");
 
             try {
-                String input = scanner.nextLine();
+                String input = scanner.nextLine().trim();
                 if (input.isEmpty()) continue;
+
                 int opcao = Integer.parseInt(input);
 
                 switch (opcao) {
@@ -105,36 +109,37 @@ public class Principal {
                         analisarNovaAcao(scanner, portefolio, taxaTesouro);
                         break;
                     case 2:
-                        // CORREÇÃO AQUI TAMBÉM
                         System.out.println(portefolio.gerarRelatorioCompleto());
                         break;
                     case 3:
                         continuar = false;
                         break;
                     default:
-                        System.out.println("❌ Opção inválida!");
+                        System.out.println("❌ Opção inválida! Escolha 1, 2 ou 3.");
                 }
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Por favor, digite apenas números (ex: 1).");
             } catch (Exception e) {
-                System.out.println("❌ Erro: " + e.getMessage());
+                System.out.println("❌ Erro inesperado: " + e.getMessage());
             }
         }
         scanner.close();
     }//executarMenuInterativo
 
     private static void analisarNovaAcao(Scanner scanner, Portefolio portefolio, double taxaTesouro) {
-        System.out.print("\n📈 Digite o ticker da ação: ");
+        System.out.print("\n📈 Digite o ticker da ação (ex: AAPL): ");
         String ticker = scanner.nextLine().toUpperCase().trim();
 
         if (ticker.isEmpty()) return;
 
         try {
             Map<String, Object> dados = ClienteApi.obterDadosAcao(ticker);
-            // Verificar se a ação foi encontrada
-            if (dados.containsKey("naoEncontrada") && (Boolean) dados.get("naoEncontrada")) {
-                System.out.println("❌ Ação '" + ticker + "' não encontrada na API.");
-                System.out.println("   Verifique se o ticker está correto.");
+
+            if (dados.containsKey("erro")) {
+                System.out.println("❌ Erro: Ação não encontrada ou problema na API.");
                 return;
             }
+
             Acao acao = FabricaAcoes.criarAcao(dados);
 
             System.out.println("\n--- RESULTADO PRELIMINAR ---");

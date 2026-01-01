@@ -1,54 +1,62 @@
 package analisefundamental.estrategia;
 
 import analisefundamental.modelo.Acao;
+import analisefundamental.modelo.DadosFinanceiros;
 
 public class EstrategiaDCF implements EstrategiaAvaliacao {
 
     @Override
     public double calcularPrecoJusto(Acao pAcao, double pTaxaLivreRisco) {
-        // Protocolo: WACC = US10Y + Prémio de Risco Setorial
-        double wacc = pTaxaLivreRisco + pAcao.obterPremioRiscoSetor();
+        DadosFinanceiros dados = pAcao.obterDadosFinanceiros();
 
-        // REGRA: Piso absoluto de 7% (Protocolo v3.1)
-        if (wacc < 0.07) {
-            wacc = 0.07;
+        // 1. Obter Free Cash Flow Ajustado por Ação
+        double fcfPorAcao = dados.calcularFCFAjustado();
+
+        // Se FCF for negativo, tentamos usar o FCO como fallback para empresas em crescimento agressivo
+        if (fcfPorAcao <= 0) {
+            fcfPorAcao = dados.obterFluxoCaixaOperacional() / dados.obterAcoesCirculacaoAtual();
+            if (fcfPorAcao <= 0) return 0.0;
         }
 
-        // Obter FCF Ajustado (para Tech) ou FCF normal
-        double fcfBase = pAcao.obterMetricaAvaliacao();
-        if (fcfBase <= 0) {
-            return 0.0;
+        // 2. Definir Taxa de Desconto (WACC)
+        // Risco Base + Beta * Prémio Mercado (5.5%)
+        double custoCapital = pTaxaLivreRisco + (pAcao.obterBeta() * 0.055);
+        // Tech "Monstro" (Apple/MSFT) tem risco menor, permitimos 7.5% mínimo
+        custoCapital = Math.max(0.075, custoCapital);
+
+        // 3. Taxa de Crescimento (g)
+        // Usamos o menor entre o histórico e 15% (já limitado pelo Python, mas garantimos aqui)
+        double crescimento = Math.min(0.15, dados.obterCrescimentoLucros5A());
+        if (crescimento < 0.03) crescimento = 0.03;
+
+        // 4. Período de Crescimento
+        // Empresas "Monstro" (Margem > 20% e ROE > 20%) crescem por 10 anos
+        boolean ehMonstro = (dados.obterMargemLiquidaAtual() > 0.20 && dados.obterRoe() > 0.20);
+        int anosCrescimento = ehMonstro ? 10 : 5;
+
+        // 5. Taxa Terminal (Perpetuidade)
+        double taxaTerminal = 0.03;
+
+        // --- CÁLCULO DCF ---
+        double valorPresenteTotal = 0.0;
+        double fcfFuturo = fcfPorAcao;
+
+        // Fase de Crescimento
+        for (int i = 1; i <= anosCrescimento; i++) {
+            fcfFuturo *= (1 + crescimento);
+            valorPresenteTotal += fcfFuturo / Math.pow(1 + custoCapital, i);
         }
 
-        // Crescimento: limitado a 12% para ser conservador
-        double crescimento = pAcao.obterDadosFinanceiros().obterCrescimentoLucros5A();
-        crescimento = Math.min(crescimento, 0.12);
+        // Valor Terminal
+        double valorTerminal = (fcfFuturo * (1 + taxaTerminal)) / (custoCapital - taxaTerminal);
+        double valorPresenteTerminal = valorTerminal / Math.pow(1 + custoCapital, anosCrescimento);
 
-        // 1. Projeção de 5 anos
-        double somaFcfDescontados = 0.0;
-        double fcfProjetado = fcfBase;
+        valorPresenteTotal += valorPresenteTerminal;
 
-        for (int ano = 1; ano <= 5; ano++) {
-            fcfProjetado = fcfProjetado * (1 + crescimento);
-            double fcfDescontado = fcfProjetado / Math.pow(1 + wacc, ano);
-            somaFcfDescontados += fcfDescontado;
-        }
+        // 6. Margem de Segurança
+        // Se for "Monstro", exigimos apenas 15% de desconto. Outros, 25%.
+        double descontoSeguranca = ehMonstro ? 0.85 : 0.75;
 
-        // 2. Valor Terminal com g máximo de 2.5% (REGRA DO PROTOCOLO)
-        double gTerminal = Math.min(crescimento, 0.025); // MÁXIMO 2.5%
-
-        // Garantir que wacc > gTerminal
-        if (wacc <= gTerminal) {
-            gTerminal = wacc - 0.01; // Ajustar para diferença mínima
-        }
-
-        double valorTerminal = fcfProjetado * (1 + gTerminal) / (wacc - gTerminal);
-        double valorTerminalDescontado = valorTerminal / Math.pow(1 + wacc, 5);
-
-        // 3. Valor total da empresa
-        double valorEmpresa = somaFcfDescontados + valorTerminalDescontado;
-
-        // 4. Aplicar Margem de Segurança de 30% embutida
-        return valorEmpresa * 0.7;
-    }//calcularPrecoJusto
-}//classe EstrategiaDCF
+        return valorPresenteTotal * descontoSeguranca;
+    }
+}
