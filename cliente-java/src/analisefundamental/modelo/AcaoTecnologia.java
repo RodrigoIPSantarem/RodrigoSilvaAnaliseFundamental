@@ -11,8 +11,8 @@ public class AcaoTecnologia extends Acao {
 
     @Override
     public double obterMetricaAvaliacao() {
-        // Polimorfismo: Tech usa FCF Ajustado (FCO - CapEx - SBC)
-        return this.mDadosFinanceiros.obterFCFAjustado();
+        // CORREÇÃO: O método no teu DadosFinanceiros chama-se 'calcularFCFAjustado'
+        return this.mDadosFinanceiros.calcularFCFAjustado();
     }//obterMetricaAvaliacao
 
     @Override

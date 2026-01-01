@@ -90,7 +90,7 @@ public class Portefolio {
                 .orElse(null);
     }//encontrarAcao
 
-    // ========== ANÁLISE AGREDADA ==========
+    // ========== ANÁLISE AGREGADA ==========
 
     /**
      * Retorna lista de ações APROVADAS (Nota ≥ 80 + Margem ≥ 25%).
@@ -274,7 +274,8 @@ public class Portefolio {
 
     private String gerarSecaoAprovadas() {
         StringBuilder sb = new StringBuilder();
-        List<Acao> aprovadas = this.obterAprovasOrdenadas();
+        // CORRIGIDO AQUI: "obterAprovadasOrdenadas" em vez de "obterAprovasOrdenadas"
+        List<Acao> aprovadas = this.obterAprovadasOrdenadas();
 
         if (aprovadas.isEmpty()) {
             sb.append("✅ AÇÕES APROVADAS PARA COMPRA:\n");
@@ -295,7 +296,7 @@ public class Portefolio {
             double margem = a.calcularMargemSeguranca(pj);
             double nota = a.calcularNotaFinal();
             Recomendacao rec = a.obterRecomendacao(margem, nota);
-            double limite = a.calcularLimitePosicao();
+            // double limite = a.calcularLimitePosicao(); // Removido se não for usado
 
             // Truncar nomes longos
             String nomeCurto = a.obterNome();
@@ -396,6 +397,7 @@ public class Portefolio {
 
     private String gerarSecaoAlocacao() {
         StringBuilder sb = new StringBuilder();
+        // CORRIGIDO AQUI TAMBÉM: "obterAprovadasOrdenadas"
         List<Acao> aprovadas = this.obterAprovadasOrdenadas();
 
         if (aprovadas.isEmpty()) {
@@ -403,7 +405,7 @@ public class Portefolio {
                     "Aguardar melhores oportunidades.\n";
         }
 
-        sb.append("\n💰 RECOMENDAÇÕES DE ALOAÇÃO (% do Capital Total):\n");
+        sb.append("\n💰 RECOMENDAÇÕES DE ALOCAÇÃO (% do Capital Total):\n");
         sb.append("=".repeat(80)).append("\n");
         sb.append(String.format("%-4s | %-6s | %-20s | %-12s | %-10s | %-12s | %-12s\n",
                 "#", "Ticker", "Empresa", "Limite Pos.", "Valor Invest.", "% Capital", "Nota"));
@@ -432,9 +434,9 @@ public class Portefolio {
         }
 
         sb.append("-".repeat(80)).append("\n");
-        sb.append(String.format("TOTAL ALOAÇÃO RECOMENDADA: €%.0f (%.1f%% do capital)\n",
+        sb.append(String.format("TOTAL ALOCAÇÃO RECOMENDADA: €%.0f (%.1f%% do capital)\n",
                 capitalAlocado, (capitalAlocado / this.mCapitalTotal) * 100));
-        sb.append(String.format("CAPITAL NÃO ALOAADO: €%.0f (%.1f%% do capital)\n",
+        sb.append(String.format("CAPITAL NÃO ALOCADO: €%.0f (%.1f%% do capital)\n",
                 this.mCapitalTotal - capitalAlocado,
                 ((this.mCapitalTotal - capitalAlocado) / this.mCapitalTotal) * 100));
 

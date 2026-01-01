@@ -11,27 +11,30 @@ public class AcaoBanco extends Acao {
 
     @Override
     public double obterMetricaAvaliacao() {
-        // Polimorfismo: Banca usa Tangible Book Value (TBV)
-        return this.mDadosFinanceiros.obterValorContabilisticoTangivelPorAcao();
+        // CORREÇÃO: O método agora chama-se 'calcularTBVporAcao'
+        // TBV = Valor Contabilístico Tangível
+        return this.mDadosFinanceiros.calcularTBVporAcao();
     }//obterMetricaAvaliacao
 
     @Override
     public double obterPremioRiscoSetor() {
-        return 0.05; // US10Y + 5%
+        // Financeiro tem risco sistémico moderado/alto (6.5%)
+        return 0.065;
     }//obterPremioRiscoSetor
 
     @Override
     public BoolEMensagem verificarRiscosSetoriais() {
-        double tbv = obterMetricaAvaliacao();
-        if (tbv <= 0) {
-            return new BoolEMensagem(false, "REJEIÇÃO BANCA: TBV Negativo (Insolvência técnica?).");
+        // 1. Verificar Goodwill (Bancos sólidos têm ativos reais, não "ar")
+        if (this.mDadosFinanceiros.calcularRacioGoodwillAtivos() > 0.10) {
+            return new BoolEMensagem(false, "REJEIÇÃO BANCO: Goodwill excessivo (>10% dos Ativos).");
         }
 
-        double ptbv = this.mPrecoAtual / tbv;
-        if (ptbv > 1.5 && this.mDadosFinanceiros.obterRoe() < 0.15) {
-            return new BoolEMensagem(false, "REJEIÇÃO BANCA: P/TBV > 1.5 sem ROE > 15%.");
+        // 2. Verificar ROE (Bancos precisam de ROE > 8-10% para criar valor)
+        if (this.mDadosFinanceiros.obterRoe() < 0.08) {
+            return new BoolEMensagem(false, "REJEIÇÃO BANCO: ROE muito baixo (<8%).");
         }
 
-        return new BoolEMensagem(true, "Banca: Métricas de balanço sólidas.");
+        return new BoolEMensagem(true, "Banco: Métricas de solidez aceitáveis.");
     }//verificarRiscosSetoriais
+
 }//classe AcaoBanco

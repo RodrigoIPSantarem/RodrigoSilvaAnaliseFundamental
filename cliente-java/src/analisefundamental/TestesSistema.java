@@ -5,7 +5,7 @@ import analisefundamental.estrategia.*;
 import analisefundamental.enums.Setor;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List; // <--- FALTAVA ESTE IMPORT
+import java.util.List;
 
 public class TestesSistema {
 
@@ -42,9 +42,14 @@ public class TestesSistema {
 
         // Criar histórico com diluição massiva (1000 -> 1500 ações)
         List<Long> acoesDiluidas = Arrays.asList(1500L, 1200L, 1000L);
+
+        // Construtor alinhado com DadosFinanceiros.java (20 parâmetros)
         DadosFinanceiros dados = new DadosFinanceiros(
-                0,0,0,0,0,0,0,0,0, new ArrayList<>(),
-                1500, acoesDiluidas, new ArrayList<>(), 0,0,0,0,0,0,0,0,0,0
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, null, // Lucros, Rentabilidade
+                1500, acoesDiluidas, null,          // Ações (Diluição Aqui!)
+                0.0, 0.0, 0.0,                      // Fluxos
+                0.0, 0.0, 0.0, 0.0,                 // Balanço
+                0.0, 0.0, 0.0                       // Dividendos
         );
 
         Acao acao = new AcaoGeral("DIL", "Diluidora", 10, 1, Setor.GERAL, dados);
@@ -60,15 +65,17 @@ public class TestesSistema {
         System.out.print("Teste 3: Ajuste Tech (FCF - SBC)... ");
         // FCF = 100, SBC = 20 -> FCF Ajustado deve ser 80
 
+        // Construtor alinhado com DadosFinanceiros.java (20 parâmetros)
         DadosFinanceiros dados = new DadosFinanceiros(
-                0,0,0,0,0,0,0,0,0, new ArrayList<>(),
-                0, new ArrayList<>(), new ArrayList<>(),
-                110, -10, 20, // FCO=110, Capex=-10 (FCF=100), SBC=20
-                0,0,0,0,0,0,0
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, null, // Lucros
+                0, null, null,                      // Ações
+                110.0, -10.0, 20.0,                 // FCO=110, Capex=-10, SBC=20
+                0.0, 0.0, 0.0, 0.0,                 // Balanço
+                0.0, 0.0, 0.0                       // Dividendos
         );
 
         AcaoTecnologia tech = new AcaoTecnologia("TECH", "Tech", 10, 1, dados);
-        double metrica = tech.obterMetricaAvaliacao();
+        double metrica = tech.obterMetricaAvaliacao(); // Usa calcularFCFAjustado internamente
 
         if (metrica == 80.0) {
             System.out.println("[PASSOU] FCF Ajustado: " + metrica);
@@ -79,10 +86,13 @@ public class TestesSistema {
 
     // Helper para criar dados limpos
     private static DadosFinanceiros criarDadosDummy() {
+        // Construtor Padrão para testes simples (Graham)
         return new DadosFinanceiros(
-                10.0, 0, 0, 0.05, 0, 0, 0, 0, 0,
-                new ArrayList<>(), 1000, Arrays.asList(1000L), new ArrayList<>(),
-                0,0,0,0,0,0,0,0,0,0
+                10.0, 0.05, 0.0, 0.0, 0.0, 0.0, null, // EPS=10, g=5%
+                1000, Arrays.asList(1000L), null,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0
         );
     }
 }//classe TestesSistema
