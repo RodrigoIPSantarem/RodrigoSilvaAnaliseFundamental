@@ -31,7 +31,7 @@ public class FabricaAcoes {
                 break;
             case FINANCEIRO:
                 acao = new AcaoBanco(ticker, nome, preco, beta, dados);
-                acao.definirEstrategia(new EstrategiaGraham());
+                acao.definirEstrategia(new EstrategiaBanco());
                 break;
             case UTILITARIOS:
                 acao = new AcaoUtilitaria(ticker, nome, preco, beta, dados);
@@ -73,6 +73,7 @@ public class FabricaAcoes {
         double fco = extrairDouble(m, "fluxoCaixaOperacional");
         double capex = extrairDouble(m, "capex");
         double sbc = extrairDouble(m, "compensacaoBaseadaAcoes");
+        double fcl = extrairDouble(m, "fluxoCaixaLivre");  // FCL direto da API
 
         // Campos opcionais
         double bookValue = extrairDouble(m, "valorContabilisticoPorAcao");
@@ -84,13 +85,19 @@ public class FabricaAcoes {
         double payout = extrairDouble(m, "racioDistribuicao");
 
         // Criar com construtor completo (21 parâmetros)
-        return new DadosFinanceiros(
+        DadosFinanceiros dados = new DadosFinanceiros(
                 eps, crescimento, divida, roe, roic, margem,
                 histMargem, acoesAtual, histAcoes, histLucros,
                 fco, capex, sbc,
                 bookValue, intangiveis, goodwill, ativos,
                 dividendo, yield, payout
         );
+        // Se a API enviou FCL direto, usar esse valor (mais preciso que FCO + Capex)
+        if (fcl != 0.0) {
+            dados.definirFluxoCaixaLivre(fcl);
+        }
+
+        return dados;
     }
 
     private static Setor determinarSetor(String pS) {

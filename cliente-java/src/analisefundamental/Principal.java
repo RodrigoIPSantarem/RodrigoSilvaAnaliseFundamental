@@ -38,6 +38,15 @@ public class Principal {
 
             try {
                 Map<String, Object> dados = ClienteApi.obterDadosAcao(ticker);
+                // Verificar se a ação foi encontrada
+
+                if (dados.containsKey("naoEncontrada") && (Boolean) dados.get("naoEncontrada")) {
+
+                    System.out.println("   ⚠️  Ação não encontrada na API - IGNORADA");
+
+                    continue;  // Não adicionar ao portefólio
+
+                }
                 Acao acao = FabricaAcoes.criarAcao(dados);
                 portefolio.adicionarAcao(acao);
 
@@ -120,6 +129,12 @@ public class Principal {
 
         try {
             Map<String, Object> dados = ClienteApi.obterDadosAcao(ticker);
+            // Verificar se a ação foi encontrada
+            if (dados.containsKey("naoEncontrada") && (Boolean) dados.get("naoEncontrada")) {
+                System.out.println("❌ Ação '" + ticker + "' não encontrada na API.");
+                System.out.println("   Verifique se o ticker está correto.");
+                return;
+            }
             Acao acao = FabricaAcoes.criarAcao(dados);
 
             System.out.println("\n--- RESULTADO PRELIMINAR ---");

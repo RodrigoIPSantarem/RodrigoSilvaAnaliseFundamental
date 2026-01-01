@@ -234,9 +234,10 @@ public class ClienteApi {
         // Mock simples para manter o sistema a rodar em caso de erro 404
         Map<String, Object> mock = new HashMap<>();
         mock.put("ticker", pTicker);
-        mock.put("nomeEmpresa", "Mock " + pTicker);
-        mock.put("precoAtual", 100.0);
+        mock.put("nomeEmpresa", "[NÃO ENCONTRADA] " + pTicker);
+        mock.put("precoAtual", 0.0);  // Preço 0 = ação inválida
         mock.put("setor", "Geral");
+        mock.put("naoEncontrada", true);  // Flag para identificar ações não encontradas
         // Nota: Sem dados financeiros, vai dar erro ou nota baixa, o que é esperado para falhas.
         return mock;
     }

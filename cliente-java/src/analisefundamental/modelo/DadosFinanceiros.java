@@ -143,6 +143,7 @@ public class DadosFinanceiros {
     public double obterCapex() { return mCapex; }
     public double obterCompensacaoBaseadaAcoes() { return mCompensacaoBaseadaAcoes; }
     public double obterFluxoCaixaLivre() { return mFluxoCaixaLivre; }
+    public void definirFluxoCaixaLivre(double pFcl) { this.mFluxoCaixaLivre = pFcl; }
     public double obterValorContabilisticoPorAcao() { return mValorContabilisticoPorAcao; }
     public double obterIntangiveis() { return mIntangiveis; }
     public double obterGoodwill() { return mGoodwill; }
@@ -186,14 +187,19 @@ public class DadosFinanceiros {
     }
 
     public double calcularFCFAjustado() {
-        return mFluxoCaixaLivre - mCompensacaoBaseadaAcoes;
+        // FCF Ajustado = (FCF Total - SBC Total) / Ações em Circulação
+        double fcfAjustadoTotal = mFluxoCaixaLivre - mCompensacaoBaseadaAcoes;
+        if (mAcoesCirculacaoAtual <= 0) return 0.0;
+        return fcfAjustadoTotal / mAcoesCirculacaoAtual;
     }
 
     public double calcularTBVporAcao() {
         if (mAcoesCirculacaoAtual == 0) return 0.0;
-        double tangibleEquity = (mValorContabilisticoPorAcao * mAcoesCirculacaoAtual)
-                - mIntangiveis - mGoodwill;
-        return tangibleEquity / mAcoesCirculacaoAtual;
+        // valorContabilisticoPorAcao já vem POR AÇÃO da API
+        double intangiveisEGoodwillPorAcao = (mIntangiveis + mGoodwill) / mAcoesCirculacaoAtual;
+        double tbv = mValorContabilisticoPorAcao - intangiveisEGoodwillPorAcao;
+        // Se TBV for negativo ou zero, usar Book Value direto como fallback
+        return (tbv > 0) ? tbv : mValorContabilisticoPorAcao;
     }
 
     @Override
