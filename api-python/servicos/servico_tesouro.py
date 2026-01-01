@@ -2,7 +2,6 @@
 import requests
 from datetime import datetime
 
-
 class ServicoTesouro:
     """
     Serviço para obter a taxa do Tesouro dos EUA a 10 anos.
@@ -41,7 +40,7 @@ class ServicoTesouro:
                         if bc_10year is not None and bc_10year.text:
                             return float(bc_10year.text) / 100.0
 
-            # Método 3: API alternativa
+            # Método 3: API alternativa FiscalData
             url_alt = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates"
             params = {
                 "filter": "record_date:gte:2024-01-01",

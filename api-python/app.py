@@ -1,4 +1,4 @@
-# app.py - VERSÃO FINAL
+# app.py - VERSÃO FINAL CORRIGIDA
 from flask import Flask, request, jsonify
 from servicos.servico_yahoo import ServicoYahoo
 from servicos.servico_tesouro import ServicoTesouro
@@ -9,7 +9,8 @@ app = Flask(__name__)
 CORS(app)  # Permitir requests do Java
 
 # Configurações
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+# CRÍTICO: 'False' remove espaços/newlines para o Java conseguir ler
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 app.config['JSON_SORT_KEYS'] = False
 
 
@@ -59,6 +60,13 @@ def obter_acao_individual(ticker):
         ticker = ticker.upper().strip()
         print(f"🔍 Buscando dados para: {ticker}")
 
+        # Proteção contra erros de input (ex: user colocou vírgula)
+        if "," in ticker:
+            return jsonify({
+                "erro": "Endpoint para ação individual. Para múltiplas, use /api/acoes.",
+                "ticker": ticker
+            }), 400
+
         dados = ServicoYahoo.obter_dados_acao(ticker)
 
         if "erro" in dados:
@@ -98,32 +106,20 @@ def obter_multiplas_acoes():
 
         print(f"🔍 Buscando {len(lista_tickers)} ações: {lista_tickers}")
 
-        # Buscar taxa do tesouro uma vez
         taxa_tesouro = ServicoTesouro.obter_taxa_tesouro_10anos()
-
         resultados = []
+
         for t in lista_tickers:
             try:
                 dados_acao = ServicoYahoo.obter_dados_acao(t)
-
                 if "erro" not in dados_acao:
-                    # Adicionar taxa do tesouro
                     if "dadosMercado" in dados_acao:
                         dados_acao["dadosMercado"]["tesouroEUA10Anos"] = taxa_tesouro
                     resultados.append(dados_acao)
                 else:
-                    resultados.append({
-                        "ticker": t,
-                        "erro": dados_acao["erro"],
-                        "sucesso": False
-                    })
-
+                    resultados.append({"ticker": t, "erro": dados_acao["erro"], "sucesso": False})
             except Exception as e:
-                resultados.append({
-                    "ticker": t,
-                    "erro": str(e),
-                    "sucesso": False
-                })
+                resultados.append({"ticker": t, "erro": str(e), "sucesso": False})
 
         return jsonify({
             "sucesso": True,
@@ -135,17 +131,13 @@ def obter_multiplas_acoes():
 
     except Exception as e:
         print(f"❌ Erro no endpoint /acoes: {str(e)}")
-        return jsonify({
-            "erro": str(e),
-            "sucesso": False
-        }), 500
+        return jsonify({"erro": str(e), "sucesso": False}), 500
 
 
 @app.route('/api/batch', methods=['POST'])
 def processar_lote():
     """
     Processamento em lote via POST.
-    Recebe JSON: {"tickers": ["AAPL", "MSFT", "KO"]}
     """
     try:
         dados = request.get_json()
@@ -153,16 +145,13 @@ def processar_lote():
             return jsonify({"erro": "JSON com campo 'tickers' obrigatório"}), 400
 
         tickers = [t.strip().upper() for t in dados["tickers"] if t and str(t).strip()]
-
         if not tickers:
             return jsonify({"erro": "Nenhum ticker válido"}), 400
 
         print(f"🔍 Processando lote com {len(tickers)} ações")
-
-        # Taxa do tesouro
         taxa_tesouro = ServicoTesouro.obter_taxa_tesouro_10anos()
 
-        # Processar (limitar a 10 para performance)
+        # Limitar a 10 para performance no teste
         tickers = tickers[:10]
         resultados = []
 
@@ -174,11 +163,7 @@ def processar_lote():
                     dados_acao["sucesso"] = True
                 resultados.append(dados_acao)
             except Exception as e:
-                resultados.append({
-                    "ticker": ticker,
-                    "erro": str(e),
-                    "sucesso": False
-                })
+                resultados.append({"ticker": ticker, "erro": str(e), "sucesso": False})
 
         return jsonify({
             "sucesso": True,
@@ -188,10 +173,7 @@ def processar_lote():
         })
 
     except Exception as e:
-        return jsonify({
-            "erro": str(e),
-            "sucesso": False
-        }), 500
+        return jsonify({"erro": str(e), "sucesso": False}), 500
 
 
 if __name__ == '__main__':
@@ -200,6 +182,5 @@ if __name__ == '__main__':
     print("📌 Endpoints disponíveis:")
     print("   http://localhost:5000/api/estado")
     print("   http://localhost:5000/api/acao/AAPL")
-    print("   http://localhost:5000/api/tesouro/10anos")
     print("=" * 60)
     app.run(host='0.0.0.0', port=5000, debug=False)
