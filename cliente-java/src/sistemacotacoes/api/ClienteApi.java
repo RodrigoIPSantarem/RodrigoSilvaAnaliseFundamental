@@ -1,95 +1,153 @@
+// ClienteApi.java
 package sistemacotacoes.api;
 
 import sistemacotacoes.modelo.*;
+import sistemacotacoes.enums.TipoAtivo;
+import sistemacotacoes.fabrica.FabricaAtivos;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+/**
+ * Cliente HTTP para comunicação com a API Python (Flask).
+ * 
+ * Demonstra: CONSUMO DE API REST + USO DE FACTORY
+ */
 public class ClienteApi {
 
     private static final String URL_BASE = "http://localhost:5000/cotacao?ticker=";
+    private static final int TIMEOUT_MS = 5000;
 
-    public Ativo buscarAtivo(String ticker, String tipoAtivo) {
+    //--------------------------------------------------
+    // Buscar Ativo (com tipo explícito)
+    //--------------------------------------------------
+    public Ativo buscarAtivo(String pTicker, TipoAtivo pTipo) {
         try {
-            // 1. Fazer o pedido à API Python
-            String json = fazerRequisicao(ticker);
+            String json = fazerRequisicao(pTicker);
 
-            if (json == null) {
-                System.out.println("❌ Erro: Não foi possível conectar à API.");
-                return new Acao(ticker, "Desconhecido", 0, 0, 0); // Retorna vazio para não crashar
-            }
+            if (json == null || json.contains("erro")) {
+                System.out.println("❌ Erro ao buscar " + pTicker);
+                return null;
+            }//if
 
-            // 2. Extrair dados do JSON (Parse manual simples)
+            // Extrair dados do JSON
             String nome = extrairValor(json, "nome");
             double preco = extrairDouble(json, "preco");
             double variacao = extrairDouble(json, "variacao");
             long volume = extrairLong(json, "volume");
 
-            // 3. Factory: Criar o objeto certo baseado no tipo pedido no Principal
-            switch (tipoAtivo.toUpperCase()) {
-                case "CRIPTO":
-                    return new Cripto(ticker, nome, preco, variacao, volume);
-                case "ETF":
-                    return new ETF(ticker, nome, preco, variacao, volume);
-                default:
-                    return new Acao(ticker, nome, preco, variacao, volume);
-            }
+            // Usar Factory para criar o objeto correto
+            return FabricaAtivos.criarAtivo(
+                pTipo, pTicker, nome, preco, variacao, volume
+            );
 
         } catch (Exception e) {
-            System.out.println("Erro ao buscar ativo: " + e.getMessage());
-            return new Acao(ticker, "Erro", 0, 0, 0);
-        }
-    }
+            System.out.println("Erro: " + e.getMessage());
+            return null;
+        }//catch
+    }//buscarAtivo
 
-    // --- Métodos Auxiliares (HTTP e Parse) ---
+    //--------------------------------------------------
+    // Buscar Ativo (com detecção automática)
+    //--------------------------------------------------
+    public Ativo buscarAtivoAuto(String pTicker) {
+        try {
+            String json = fazerRequisicao(pTicker);
 
-    private String fazerRequisicao(String ticker) throws Exception {
-        URL url = new URL(URL_BASE + ticker);
+            if (json == null || json.contains("erro")) {
+                System.out.println("❌ Erro ao buscar " + pTicker);
+                return null;
+            }//if
+
+            // Extrair dados do JSON
+            String nome = extrairValor(json, "nome");
+            double preco = extrairDouble(json, "preco");
+            double variacao = extrairDouble(json, "variacao");
+            long volume = extrairLong(json, "volume");
+
+            // Factory com detecção automática
+            return FabricaAtivos.criarAtivoAuto(
+                pTicker, nome, preco, variacao, volume
+            );
+
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
+            return null;
+        }//catch
+    }//buscarAtivoAuto
+
+    //--------------------------------------------------
+    // Verificar se API está disponível
+    //--------------------------------------------------
+    public boolean apiDisponivel() {
+        try {
+            URL url = new URL("http://localhost:5000/saude");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(TIMEOUT_MS);
+            conn.setRequestMethod("GET");
+            return conn.getResponseCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }//catch
+    }//apiDisponivel
+
+    //--------------------------------------------------
+    // Métodos Auxiliares (HTTP e Parse JSON)
+    //--------------------------------------------------
+
+    private String fazerRequisicao(String pTicker) throws Exception {
+        URL url = new URL(URL_BASE + pTicker.toUpperCase());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(TIMEOUT_MS);
+        conn.setReadTimeout(TIMEOUT_MS);
         conn.setRequestMethod("GET");
 
         if (conn.getResponseCode() != 200) return null;
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(conn.getInputStream())
+        );
         StringBuilder resposta = new StringBuilder();
         String linha;
-        while ((linha = reader.readLine()) != null) resposta.append(linha);
+        while ((linha = reader.readLine()) != null) {
+            resposta.append(linha);
+        }//while
         reader.close();
 
         return resposta.toString();
-    }
+    }//fazerRequisicao
 
-    // Extrai texto do JSON (ex: "nome": "Apple")
-    private String extrairValor(String json, String chave) {
-        String busca = "\"" + chave + "\":";
-        int inicio = json.indexOf(busca);
+    private String extrairValor(String pJson, String pChave) {
+        String busca = "\"" + pChave + "\":";
+        int inicio = pJson.indexOf(busca);
         if (inicio == -1) return "N/A";
 
         inicio += busca.length();
-        if (json.charAt(inicio) == '"') inicio++; // Pula aspas se for string
+        if (pJson.charAt(inicio) == '"') inicio++;
 
-        int fim = json.indexOf(",", inicio);
-        if (fim == -1) fim = json.indexOf("}", inicio);
+        int fim = pJson.indexOf(",", inicio);
+        if (fim == -1) fim = pJson.indexOf("}", inicio);
 
-        String valor = json.substring(inicio, fim).replace("\"", "").trim();
-        return valor;
-    }
+        return pJson.substring(inicio, fim).replace("\"", "").trim();
+    }//extrairValor
 
-    // Extrai número double
-    private double extrairDouble(String json, String chave) {
+    private double extrairDouble(String pJson, String pChave) {
         try {
-            return Double.parseDouble(extrairValor(json, chave));
-        } catch (Exception e) { return 0.0; }
-    }
+            return Double.parseDouble(extrairValor(pJson, pChave));
+        } catch (Exception e) { 
+            return 0.0; 
+        }//catch
+    }//extrairDouble
 
-    // Extrai número long (inteiro grande)
-    private long extrairLong(String json, String chave) {
+    private long extrairLong(String pJson, String pChave) {
         try {
-            // Remove casas decimais se houver (ex: volume: 1000.0)
-            String val = extrairValor(json, chave);
+            String val = extrairValor(pJson, pChave);
             if (val.contains(".")) val = val.substring(0, val.indexOf("."));
             return Long.parseLong(val);
-        } catch (Exception e) { return 0L; }
-    }
-}
+        } catch (Exception e) { 
+            return 0L; 
+        }//catch
+    }//extrairLong
+
+}//classe ClienteApi

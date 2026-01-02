@@ -1,6 +1,14 @@
+// Analisavel.java
 package sistemacotacoes.modelo;
 
+/**
+ * Interface que define o contrato para análise de ativos financeiros.
+ * 
+ * Demonstra: INTERFACE + POLIMORFISMO
+ */
 public interface Analisavel {
-    double calcularRisco();     // Polimorfismo: Cada um calcula o seu
-    String obterRecomendacao(); // Ex: "Compra", "Venda"
-}
+    
+    double calcularRisco();
+    String obterRecomendacao();
+    
+}//interface Analisavel

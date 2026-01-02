@@ -1,32 +1,66 @@
+// ETF.java
 package sistemacotacoes.modelo;
+
+import sistemacotacoes.enums.TipoAtivo;
 
 /**
  * Representa um Exchange Traded Fund (Fundo de Índice).
- * Exemplo: S&P 500 (IVV), Nasdaq (QQQ).
- *
- * POO: Demonstra Polimorfismo ao ter um cálculo de risco muito mais baixo
- * devido à diversificação intrínseca do ativo.
+ * Exemplos: IVV (S&P 500), QQQ (Nasdaq 100)
+ * 
+ * Demonstra: HERANÇA + POLIMORFISMO
+ * O cálculo de risco é 0.5× menor devido à diversificação intrínseca.
  */
 public class ETF extends Ativo {
 
-    public ETF(String ticker, String nome, double preco, double variacao, long volume) {
-        super(ticker, nome, preco, variacao, volume);
-    }
+    // Multiplicador de risco para ETFs (menor por ser diversificado)
+    private static final double MULTIPLICADOR_RISCO = 0.5;
 
+    //--------------------------------------------------
+    // Construtor
+    //--------------------------------------------------
+    public ETF(
+        String pTicker, 
+        String pNome, 
+        double pPreco, 
+        double pVariacao, 
+        long pVolume
+    ) {
+        super(pTicker, pNome, pPreco, pVariacao, pVolume);
+    }//construtor ETF
+
+    //--------------------------------------------------
+    // Implementação Polimórfica
+    //--------------------------------------------------
+    
+    /**
+     * POLIMORFISMO: Risco de ETF = variação × 0.5
+     * ETFs são cestos diversificados, logo têm menos risco.
+     */
     @Override
     public double calcularRisco() {
-        // POLIMORFISMO:
-        // ETFs são cestos de ações diversificados.
-        // O risco é considerado metade (0.5) da volatilidade apresentada.
-        return Math.abs(this.variacao) * 0.5;
-    }
+        return Math.abs(this.mVariacao) * MULTIPLICADOR_RISCO;
+    }//calcularRisco
 
+    /**
+     * POLIMORFISMO: Recomendação específica para ETFs.
+     */
     @Override
     public String obterRecomendacao() {
-        // Estratégia típica para ETFs: "Buy and Hold" ou reforçar nas quedas
-        if (this.variacao < -1.5) {
-            return "Reforçar (Oportunidade)";
-        }
-        return "Manter para Longo Prazo";
-    }
-}
+        if (this.mVariacao < -3.0) {
+            return "💰 REFORÇAR - Oportunidade de DCA";
+        }//if
+        if (this.mVariacao > 3.0) {
+            return "📈 CONTINUAR - Tendência positiva";
+        }//if
+        return "🏦 MANTER - Estratégia longo prazo";
+    }//obterRecomendacao
+
+    /**
+     * Retorna o tipo do ativo.
+     */
+    @Override
+    public TipoAtivo obterTipo() {
+        return TipoAtivo.ETF;
+    }//obterTipo
+
+}//classe ETF
